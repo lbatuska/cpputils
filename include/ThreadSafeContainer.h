@@ -18,7 +18,8 @@ public:
   ThreadSafeContainer(const ThreadSafeContainer &other)
       : data(other.data), rwLock(other.rwLock) {}
 
-  template <typename Func> auto read(Func func) const -> decltype(func(*data)) {
+  template <typename Func>
+  auto read(Func func) const -> decltype(func(std::declval<const T &>())) {
     std::shared_lock lock(*rwLock);
     return func(*data);
   }
