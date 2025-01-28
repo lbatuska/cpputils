@@ -29,9 +29,12 @@ public:
     }
   }
 
-  // Add a task to the queue
-  template <typename Func> void addTask(Func &&task) {
-    taskQueue.push(std::forward<Func>(task));
+  // template <typename Func> void addTask(Func &&task) {
+  //   taskQueue.push(std::forward<Func>(task));
+  // }
+
+  void addTask(std::function<void()> &&task) {
+    taskQueue.push(std::move(task));
   }
 
   void stop() {
