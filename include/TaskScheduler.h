@@ -43,8 +43,8 @@ public:
   //   taskQueue.push(std::forward<Func>(task));
   // }
 
-  void addTask(std::function<void()> &&task) {
-    taskQueue.push(std::move(task));
+  bool addTask(std::function<void()> &&task) {
+    return taskQueue.push(std::move(task));
   }
 
   void stop() {
