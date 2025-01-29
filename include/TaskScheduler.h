@@ -1,11 +1,15 @@
+#pragma once
+#include "Owned.h"
 #include "SafeQueue.h"
 #include <atomic>
 #include <chrono>
 #include <functional>
+#include <iostream>
+#include <ostream>
 #include <thread>
 #include <vector>
 
-class TaskScheduler {
+class TaskScheduler : public Owned {
 private:
   SafeQueue<std::function<void()>> taskQueue;
   std::vector<std::thread> workerThreads;
@@ -24,7 +28,13 @@ public:
     while (isRunning || !taskQueue.empty()) {
       auto task = taskQueue.pop();
       if (task) {
-        task(); // wrap this in try catch for exceptions ?
+        try {
+          task();
+        } catch (const std::exception &e) {
+          std::cerr << "Caught std::exception: " << e.what() << "\n";
+        } catch (...) {
+          std::cerr << "Caught unknown exception\n";
+        }
       }
     }
   }
