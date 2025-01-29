@@ -53,16 +53,28 @@ public:
   template <typename Func>
   auto read(Func func) const -> decltype(func(std::declval<const T &>())) {
     rwLock->acquire_read();
-    auto result = func(*data);
-    rwLock->release_read();
-    return result;
+    if constexpr (std::is_void_v<decltype(func(*data))>) {
+      func(*data);
+      rwLock->release_read();
+      return;
+    } else {
+      auto result = func(*data);
+      rwLock->release_read();
+      return result;
+    }
   }
 
   template <typename Func> auto write(Func func) -> decltype(func(*data)) {
     rwLock->acquire_write();
-    auto result = func(*data);
-    rwLock->release_write();
-    return result;
+    if constexpr (std::is_void_v<decltype(func(*data))>) {
+      func(*data);
+      rwLock->release_write();
+      return;
+    } else {
+      auto result = func(*data);
+      rwLock->release_write();
+      return result;
+    }
   }
 };
 
