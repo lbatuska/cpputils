@@ -14,7 +14,7 @@ private:
   SafeQueue<std::function<void()>> taskQueue;
   std::vector<std::thread> workerThreads;
   std::atomic<bool> isRunning;
-  size_t numThreads;
+  const size_t numThreads;
 
 public:
   TaskScheduler(size_t numThreads, size_t queueSize)
@@ -57,7 +57,7 @@ public:
     }
   }
 
-  void waitForCompletion() {
+  void waitForCompletion() const {
     while (!taskQueue.empty()) {
       std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
