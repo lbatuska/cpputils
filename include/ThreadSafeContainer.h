@@ -1,10 +1,10 @@
+#pragma once
 #include "Owned.h"
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
 
 template <typename T> class ThreadSafeContainer {
-  static_assert(std::is_base_of_v<Owned, T>, "T must be an Owned type");
 
 private:
   std::shared_ptr<T> data;
