@@ -1,5 +1,4 @@
 #pragma once
-#include "Owned.h"
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
@@ -19,7 +18,8 @@ public:
       : data(other.data), rwLock(other.rwLock) {}
 
   template <typename Func>
-  auto read(Func func) const -> decltype(func(std::declval<const T &>())) {
+  auto read(Func func) const
+      -> decltype(func(std::declval<const T &>())) const {
     std::shared_lock lock(*rwLock);
     return func(*data);
   }

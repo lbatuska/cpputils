@@ -10,7 +10,7 @@
 template <typename T> class SafeQueue : public Owned {
 private:
   std::queue<T> queue;
-  std::mutex mtx;
+  mutable std::mutex mtx;
   std::condition_variable cv;
   bool _closed; // push returns false if closed
 
@@ -52,12 +52,12 @@ public:
     return item;
   }
 
-  bool empty() {
+  bool empty() const {
     std::lock_guard<std::mutex> lock(mtx);
     return queue.empty();
   }
 
-  bool closed() {
+  bool closed() const {
     std::lock_guard<std::mutex> lock(mtx);
     return _closed;
   }
@@ -66,7 +66,7 @@ public:
     std::lock_guard<std::mutex> lock(mtx);
     _closed = true;
   }
-  size_t current_size() {
+  size_t current_size() const {
     std::lock_guard<std::mutex> lock(mtx);
     return queue.size();
   }
