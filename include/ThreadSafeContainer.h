@@ -51,7 +51,8 @@ public:
       : data(other.data), rwLock(other.rwLock) {}
 
   template <typename Func>
-  auto read(Func func) const -> decltype(func(std::declval<const T &>())) {
+  auto read(Func func) const
+      -> decltype(func(std::declval<const T &>())) const {
     rwLock->acquire_read();
     if constexpr (std::is_void_v<decltype(func(*data))>) {
       func(*data);
@@ -92,7 +93,8 @@ public:
       : data(other.data), rwLock(other.rwLock) {}
 
   template <typename Func>
-  auto read(Func func) const -> decltype(func(std::declval<const T &>())) {
+  auto read(Func func) const
+      -> decltype(func(std::declval<const T &>())) const {
     std::unique_lock lock(*rwLock);
     return func(*data);
   }
