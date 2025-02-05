@@ -42,7 +42,7 @@ public:
     return true;
   }
 
-  T pop() {
+  [[nodiscard]] T pop() {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock,
             [this]() { return !queue.empty(); }); // Wait if the queue is empty
@@ -52,21 +52,21 @@ public:
     return item;
   }
 
-  bool empty() const {
+  const inline bool empty() const {
     std::lock_guard<std::mutex> lock(mtx);
     return queue.empty();
   }
 
-  bool closed() const {
+  const inline bool closed() const {
     std::lock_guard<std::mutex> lock(mtx);
     return _closed;
   }
 
-  void close() {
+  inline void close() {
     std::lock_guard<std::mutex> lock(mtx);
     _closed = true;
   }
-  size_t current_size() const {
+  const inline size_t current_size() const {
     std::lock_guard<std::mutex> lock(mtx);
     return queue.size();
   }
