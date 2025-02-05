@@ -5,7 +5,7 @@
 #include <mutex>
 #include <shared_mutex>
 
-class FairRWLock : Owned {
+class FairRWLock : public Owned {
 private:
   mutable std::shared_mutex rwLock;
   mutable std::mutex mtx;
@@ -15,6 +15,13 @@ private:
   int waiting_writers = 0;
 
 public:
+  FairRWLock() = default;
+  FairRWLock(FairRWLock &&other) noexcept
+      : Owned(std::move(other)), rwLock(), mtx(), cv(),
+        active_readers(other.active_readers),
+        active_writers(other.active_writers),
+        waiting_writers(other.waiting_writers) {}
+
   void acquire_read() const {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock,
