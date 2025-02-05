@@ -7,6 +7,7 @@
 #include <queue>
 #include <utility>
 
+namespace cpputils {
 template <typename T> class SafeQueue : public Owned {
 private:
   std::queue<T> queue;
@@ -71,3 +72,4 @@ public:
     return queue.size();
   }
 };
+} // namespace cpputils

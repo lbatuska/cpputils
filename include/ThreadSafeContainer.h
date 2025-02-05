@@ -4,6 +4,7 @@
 #include <mutex>
 #include <shared_mutex>
 
+namespace cpputils {
 template <typename T, typename LockType = std::shared_mutex>
 class ThreadSafeContainer {
   static_assert(std::is_same_v<LockType, std::shared_mutex> ||
@@ -104,3 +105,4 @@ public:
     return func(*data);
   }
 };
+} // namespace cpputils

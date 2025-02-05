@@ -1,5 +1,6 @@
 #pragma once
 
+namespace cpputils {
 class Owned {
 protected:
   Owned() {}
@@ -10,3 +11,4 @@ protected:
   Owned(Owned &&) noexcept(true) = default;
   Owned &operator=(Owned &&) noexcept(true) = default;
 };
+} // namespace cpputils

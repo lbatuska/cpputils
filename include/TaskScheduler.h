@@ -9,6 +9,7 @@
 #include <thread>
 #include <vector>
 
+namespace cpputils {
 class TaskScheduler : public Owned {
 private:
   SafeQueue<std::function<void()>> taskQueue;
@@ -69,3 +70,4 @@ public:
     }
   }
 };
+} // namespace cpputils

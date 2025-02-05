@@ -5,6 +5,7 @@
 #include <mutex>
 #include <shared_mutex>
 
+namespace cpputils {
 class FairRWLock : public Owned {
 private:
   mutable std::shared_mutex rwLock;
@@ -55,3 +56,4 @@ public:
     cv.notify_all();
   }
 };
+} // namespace cpputils
