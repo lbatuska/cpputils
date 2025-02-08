@@ -29,11 +29,19 @@ public:
   auto read(Func func) const
       -> decltype(func(std::declval<const T &>())) const {
     std::shared_lock lock(*rwLock);
+    if constexpr (std::is_void_v<decltype(func(*data))>) {
+      func(*data);
+      return;
+    }
     return func(*data);
   }
 
   template <typename Func> auto write(Func func) -> decltype(func(*data)) {
     std::unique_lock lock(*rwLock);
+    if constexpr (std::is_void_v<decltype(func(*data))>) {
+      func(*data);
+      return;
+    }
     return func(*data);
   }
 };
@@ -47,6 +55,9 @@ public:
   ThreadSafeContainer(T &&initialData)
       : data(std::make_shared<T>(std::move(initialData))),
         rwLock(std::make_shared<FairRWLock>()) {}
+
+  ThreadSafeContainer(std::shared_ptr<T> &&existingData)
+      : data(std::move(existingData)), rwLock(std::make_shared<FairRWLock>()) {}
 
   ThreadSafeContainer(const ThreadSafeContainer &other)
       : data(other.data), rwLock(other.rwLock) {}
@@ -97,11 +108,19 @@ public:
   auto read(Func func) const
       -> decltype(func(std::declval<const T &>())) const {
     std::unique_lock lock(*rwLock);
+    if constexpr (std::is_void_v<decltype(func(*data))>) {
+      func(*data);
+      return;
+    }
     return func(*data);
   }
 
   template <typename Func> auto write(Func func) -> decltype(func(*data)) {
     std::unique_lock lock(*rwLock);
+    if constexpr (std::is_void_v<decltype(func(*data))>) {
+      func(*data);
+      return;
+    }
     return func(*data);
   }
 };
