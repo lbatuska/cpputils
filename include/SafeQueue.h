@@ -1,5 +1,6 @@
 #pragma once
 
+#include "Clone.h"
 #include "Owned.h"
 #include <condition_variable>
 #include <cstddef>
@@ -18,6 +19,19 @@ private:
 public:
   const size_t max_size;
 
+  SafeQueue(SafeQueue &&other) noexcept
+      : queue(std::move(other.queue)), _closed(other._closed),
+        max_size(other.max_size) {};
+
+  SafeQueue &operator=(SafeQueue &&other) noexcept {
+    if (this != &other) {
+      std::lock_guard<std::mutex> lock(other.mtx);
+      queue = std::move(other.queue);
+      _closed = other._closed;
+    }
+    return *this;
+  }
+
   explicit SafeQueue(size_t size) noexcept(true)
       : max_size(size), _closed(false) {}
 
@@ -29,7 +43,7 @@ public:
       return queue.size() < max_size;
     }); // Wait if the queue is full
     queue.push(item);
-    cv.notify_all();
+    cv.notify_one();
     return true;
   }
 
@@ -39,10 +53,11 @@ public:
       return false;
     cv.wait(lock, [this]() { return queue.size() < max_size; });
     queue.push(std::move(item));
-    cv.notify_all();
+    cv.notify_one();
     return true;
   }
 
+  // Calling pop on a closed SafeQueue is UB
   [[nodiscard]] T pop() {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock,
@@ -51,6 +66,21 @@ public:
     queue.pop();
     cv.notify_all();
     return item;
+  }
+
+  // Peeking a closed SafeQueue is UB
+  template <typename CloneType = T>
+  [[nodiscard]] auto peek() -> decltype(auto) {
+    std::unique_lock<std::mutex> lock(mtx);
+    cv.wait(lock, [this]() { return !queue.empty(); });
+    if constexpr (std::is_copy_constructible<T>::value) {
+      return queue.front();
+    } else if constexpr (std::is_base_of_v<Clone<CloneType>, T>) {
+      return queue.front().clone();
+    }
+    static_assert(std::is_copy_constructible<T>::value ||
+                      std::is_base_of_v<Clone<CloneType>, T>,
+                  "T must be copyable or Cloneable");
   }
 
   const inline bool empty() const {
@@ -63,10 +93,19 @@ public:
     return _closed;
   }
 
+  // Will notify_all
   inline void close() {
     std::lock_guard<std::mutex> lock(mtx);
     _closed = true;
+    cv.notify_all();
   }
+
+  // Waits on an empty open SafeQueue
+  inline void waititem() {
+    std::unique_lock<std::mutex> lock(mtx);
+    cv.wait(lock, [this]() { return !queue.empty() || _closed; });
+  }
+
   const inline size_t current_size() const {
     std::lock_guard<std::mutex> lock(mtx);
     return queue.size();
