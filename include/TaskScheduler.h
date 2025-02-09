@@ -23,14 +23,18 @@ private:
   std::mutex callbackMutex;
 
   void workerFunction(size_t threadId) {
-    while (isRunning) {
+    while (isRunning || !taskQueue.empty()) {
       if (taskQueue.empty()) {
         taskQueue.waititem();
         if (!isRunning && taskQueue.empty()) {
           return;
         }
       }
-      auto task = taskQueue.pop();
+      auto maybetask = taskQueue.popsafe();
+      if (!maybetask.has_value()) {
+        return;
+      }
+      auto task = maybetask.value();
       if (task) {
         threadStartTimestamps[threadId] =
             std::chrono::duration_cast<std::chrono::seconds>(
@@ -108,5 +112,13 @@ public:
     }
     return 0;
   }
+
+  inline std::vector<uint64_t> const getThreadStartTimestamps() const {
+    return threadStartTimestamps;
+  }
+
+  inline bool running() const { return isRunning; }
+
+  inline size_t queueSize() const { return taskQueue.current_size(); }
 };
 } // namespace cpputils
