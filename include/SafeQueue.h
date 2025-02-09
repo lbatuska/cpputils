@@ -5,6 +5,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <mutex>
+#include <optional>
 #include <queue>
 #include <utility>
 
@@ -57,7 +58,8 @@ public:
     return true;
   }
 
-  // Calling pop on a closed SafeQueue is UB
+  // Calling pop on a closed SafeQueue is UB (or if pop is waiting on an empty
+  // SafeQueue that get's closed) -> use popsafe
   [[nodiscard]] T pop() {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock,
@@ -66,6 +68,20 @@ public:
     queue.pop();
     cv.notify_all();
     return item;
+  }
+
+  [[nodiscard]] std::optional<T> popsafe() {
+    std::unique_lock<std::mutex> lock(mtx);
+    cv.wait(lock, [this]() {
+      return !queue.empty() || _closed;
+    }); // Wait if the queue is empty
+    if (_closed && queue.empty()) {
+      return std::nullopt;
+    }
+    T item = std::move(queue.front());
+    queue.pop();
+    cv.notify_all();
+    return std::optional<T>(std::move(item));
   }
 
   // Peeking a closed SafeQueue is UB
