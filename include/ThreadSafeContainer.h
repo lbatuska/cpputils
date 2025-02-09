@@ -25,6 +25,10 @@ public:
   ThreadSafeContainer(const ThreadSafeContainer &other)
       : data(other.data), rwLock(other.rwLock) {}
 
+  ThreadSafeContainer(std::shared_ptr<T> &&existingData)
+      : data(std::move(existingData)),
+        rwLock(std::make_shared<std::shared_mutex>()) {}
+
   template <typename Func>
   auto read(Func func) const
       -> decltype(func(std::declval<const T &>())) const {
@@ -103,6 +107,9 @@ public:
 
   ThreadSafeContainer(const ThreadSafeContainer &other)
       : data(other.data), rwLock(other.rwLock) {}
+
+  ThreadSafeContainer(std::shared_ptr<T> &&existingData)
+      : data(std::move(existingData)), rwLock(std::make_shared<std::mutex>()) {}
 
   template <typename Func>
   auto read(Func func) const
