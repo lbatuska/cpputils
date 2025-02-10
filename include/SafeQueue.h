@@ -4,6 +4,7 @@
 #include "Owned.h"
 #include <condition_variable>
 #include <cstddef>
+#include <memory>
 #include <mutex>
 #include <optional>
 #include <queue>
@@ -36,7 +37,7 @@ public:
   explicit SafeQueue(size_t size) noexcept(true)
       : max_size(size), _closed(false) {}
 
-  bool push(const T &item) {
+  bool push(const T &item) noexcept {
     std::unique_lock<std::mutex> lock(mtx);
     if (_closed) // We should not be able to push into a closed queue
       return false;
@@ -48,7 +49,7 @@ public:
     return true;
   }
 
-  bool push(T &&item) {
+  bool push(T &&item) noexcept {
     std::unique_lock<std::mutex> lock(mtx);
     if (_closed)
       return false;
@@ -70,7 +71,8 @@ public:
     return item;
   }
 
-  [[nodiscard]] std::optional<T> popsafe() {
+  // Being woken up by closing the queue when it is empty returns a std::nullopt
+  [[nodiscard]] std::optional<T> popsafe() noexcept {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock, [this]() {
       return !queue.empty() || _closed;
@@ -86,13 +88,32 @@ public:
 
   // Peeking a closed SafeQueue is UB
   template <typename CloneType = T>
-  [[nodiscard]] auto peek() -> decltype(auto) {
+  [[nodiscard]] auto peek() const noexcept -> decltype(auto) {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock, [this]() { return !queue.empty(); });
     if constexpr (std::is_copy_constructible<T>::value) {
       return queue.front();
     } else if constexpr (std::is_base_of_v<Clone<CloneType>, T>) {
       return queue.front().clone();
+    }
+    static_assert(std::is_copy_constructible<T>::value ||
+                      std::is_base_of_v<Clone<CloneType>, T>,
+                  "T must be copyable or Cloneable");
+  }
+
+  template <typename CloneType = T>
+  [[nodiscard]] auto peeksafe() const noexcept -> decltype(auto) {
+    std::unique_lock<std::mutex> lock(mtx);
+    if constexpr (std::is_copy_constructible<T>::value) {
+      if (queue.empty()) {
+        return std::optional<T>(std::nullopt);
+      }
+      return std::optional<T>(queue.front());
+    } else if constexpr (std::is_base_of_v<Clone<CloneType>, T>) {
+      if (queue.empty()) {
+        return std::optional<std::unique_ptr<CloneType>>(std::nullopt);
+      }
+      return std::optional<std::unique_ptr<CloneType>>(queue.front().clone());
     }
     static_assert(std::is_copy_constructible<T>::value ||
                       std::is_base_of_v<Clone<CloneType>, T>,
