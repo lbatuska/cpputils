@@ -2,8 +2,9 @@
 #include <memory>
 
 namespace cpputils {
-template <typename T> class Clone {
-public:
+template <typename T>
+class Clone {
+ public:
   virtual std::unique_ptr<T> clone() const noexcept = 0;
 };
-} // namespace cpputils
+}  // namespace cpputils

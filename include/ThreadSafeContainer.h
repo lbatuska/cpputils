@@ -1,8 +1,9 @@
 #pragma once
-#include "FairRWLock.h"
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
+
+#include "FairRWLock.h"
 
 namespace cpputils {
 template <typename T, typename LockType = std::shared_mutex>
@@ -13,11 +14,11 @@ class ThreadSafeContainer {
                 "ThreadSafeContainer can only be used with std::shared_mutex, "
                 "std::mutex, or FairRWLock");
 
-private:
+ private:
   std::shared_ptr<T> data;
   std::shared_ptr<LockType> rwLock;
 
-public:
+ public:
   ThreadSafeContainer(T &&initialData)
       : data(std::make_shared<T>(std::move(initialData))),
         rwLock(std::make_shared<std::shared_mutex>()) {}
@@ -40,7 +41,8 @@ public:
     return func(*data);
   }
 
-  template <typename Func> auto write(Func func) -> decltype(func(*data)) {
+  template <typename Func>
+  auto write(Func func) -> decltype(func(*data)) {
     std::unique_lock lock(*rwLock);
     if constexpr (std::is_void_v<decltype(func(*data))>) {
       func(*data);
@@ -50,12 +52,13 @@ public:
   }
 };
 
-template <typename T> class ThreadSafeContainer<T, FairRWLock> {
-private:
+template <typename T>
+class ThreadSafeContainer<T, FairRWLock> {
+ private:
   std::shared_ptr<T> data;
   std::shared_ptr<FairRWLock> rwLock;
 
-public:
+ public:
   ThreadSafeContainer(T &&initialData)
       : data(std::make_shared<T>(std::move(initialData))),
         rwLock(std::make_shared<FairRWLock>()) {}
@@ -81,7 +84,8 @@ public:
     }
   }
 
-  template <typename Func> auto write(Func func) -> decltype(func(*data)) {
+  template <typename Func>
+  auto write(Func func) -> decltype(func(*data)) {
     rwLock->acquire_write();
     if constexpr (std::is_void_v<decltype(func(*data))>) {
       func(*data);
@@ -95,12 +99,13 @@ public:
   }
 };
 
-template <typename T> class ThreadSafeContainer<T, std::mutex> {
-private:
+template <typename T>
+class ThreadSafeContainer<T, std::mutex> {
+ private:
   std::shared_ptr<T> data;
   std::shared_ptr<std::mutex> rwLock;
 
-public:
+ public:
   ThreadSafeContainer(T &&initialData)
       : data(std::make_shared<T>(std::move(initialData))),
         rwLock(std::make_shared<std::mutex>()) {}
@@ -122,7 +127,8 @@ public:
     return func(*data);
   }
 
-  template <typename Func> auto write(Func func) -> decltype(func(*data)) {
+  template <typename Func>
+  auto write(Func func) -> decltype(func(*data)) {
     std::unique_lock lock(*rwLock);
     if constexpr (std::is_void_v<decltype(func(*data))>) {
       func(*data);
@@ -131,4 +137,4 @@ public:
     return func(*data);
   }
 };
-} // namespace cpputils
+}  // namespace cpputils

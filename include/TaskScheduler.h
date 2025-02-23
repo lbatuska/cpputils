@@ -1,6 +1,4 @@
 #pragma once
-#include "Owned.h"
-#include "SafeQueue.h"
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -11,10 +9,14 @@
 #include <thread>
 #include <vector>
 
+#include "Owned.h"
+#include "SafeQueue.h"
+
 namespace cpputils {
 
-template <typename T = void> class TaskScheduler : public Owned {
-private:
+template <typename T = void>
+class TaskScheduler : public Owned {
+ private:
   using TaskType =
       std::conditional_t<std::is_void<T>::value, std::function<void()>,
                          std::packaged_task<T()>>;
@@ -33,7 +35,7 @@ private:
       taskDoneCallback;
   std::mutex callbackMutex;
 
-private:
+ private:
   void workerFunction(size_t threadId) {
     while (isRunning || !taskQueue.empty()) {
       if (taskQueue.empty()) {
@@ -74,7 +76,7 @@ private:
     }
   }
 
-public:
+ public:
   TaskScheduler(size_t numThreads, size_t queueSize)
       : taskQueue(queueSize), isRunning(true), numThreads(numThreads) {
     threadStartTimestamps.resize(numThreads);
@@ -86,9 +88,11 @@ public:
   TaskScheduler(TaskScheduler &&other) noexcept
       : taskQueue(std::move(other.taskQueue)),
         workerThreads(std::move(other.workerThreads)),
-        isRunning(other.isRunning.load()), numThreads(other.numThreads),
+        isRunning(other.isRunning.load()),
+        numThreads(other.numThreads),
         threadStartTimestamps(std::move(other.threadStartTimestamps)),
-        taskDoneCallback(std::move(other.taskDoneCallback)), callbackMutex() {}
+        taskDoneCallback(std::move(other.taskDoneCallback)),
+        callbackMutex() {}
 
   ~TaskScheduler() noexcept {
     if (isRunning) {
@@ -139,4 +143,4 @@ public:
   }
 };
 
-} // namespace cpputils
+}  // namespace cpputils

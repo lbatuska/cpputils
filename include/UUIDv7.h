@@ -25,7 +25,7 @@ class UUIDv7Generator {
    *
    */
 
-private:
+ private:
   std::atomic<uint64_t> last_timestamp{0};
   std::atomic<uint8_t> sequence{0};
   std::mt19937_64 rng;
@@ -39,11 +39,11 @@ private:
 
   uint8_t next_sequence(uint64_t current_timestamp);
 
-public:
+ public:
   inline UUIDv7Generator() : rng(std::random_device{}()) {};
 
-  static inline uint64_t
-  get_timestamp_from_uuid(std::array<uint8_t, 16> &uuid) {
+  static inline uint64_t get_timestamp_from_uuid(
+      std::array<uint8_t, 16> &uuid) {
     uint64_t timestamp = 0;
     for (int i = 0; i < 6; ++i) {
       timestamp = (timestamp << 8) | uuid[i];

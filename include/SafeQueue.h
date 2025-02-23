@@ -1,7 +1,5 @@
 #pragma once
 
-#include "Clone.h"
-#include "Owned.h"
 #include <condition_variable>
 #include <cstddef>
 #include <memory>
@@ -10,19 +8,24 @@
 #include <queue>
 #include <utility>
 
+#include "Clone.h"
+#include "Owned.h"
+
 namespace cpputils {
-template <typename T> class SafeQueue : public Owned {
-private:
+template <typename T>
+class SafeQueue : public Owned {
+ private:
   std::queue<T> queue;
   mutable std::mutex mtx;
   std::condition_variable cv;
-  bool _closed; // push returns false if closed
+  bool _closed;  // push returns false if closed
 
-public:
+ public:
   const size_t max_size;
 
   SafeQueue(SafeQueue &&other) noexcept
-      : queue(std::move(other.queue)), _closed(other._closed),
+      : queue(std::move(other.queue)),
+        _closed(other._closed),
         max_size(other.max_size) {};
 
   SafeQueue &operator=(SafeQueue &&other) noexcept {
@@ -39,11 +42,11 @@ public:
 
   bool push(const T &item) noexcept {
     std::unique_lock<std::mutex> lock(mtx);
-    if (_closed) // We should not be able to push into a closed queue
+    if (_closed)  // We should not be able to push into a closed queue
       return false;
     cv.wait(lock, [this]() {
       return queue.size() < max_size;
-    }); // Wait if the queue is full
+    });  // Wait if the queue is full
     queue.push(item);
     cv.notify_one();
     return true;
@@ -51,8 +54,7 @@ public:
 
   bool push(T &&item) noexcept {
     std::unique_lock<std::mutex> lock(mtx);
-    if (_closed)
-      return false;
+    if (_closed) return false;
     cv.wait(lock, [this]() { return queue.size() < max_size; });
     queue.push(std::move(item));
     cv.notify_one();
@@ -64,7 +66,7 @@ public:
   [[nodiscard]] T pop() {
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock,
-            [this]() { return !queue.empty(); }); // Wait if the queue is empty
+            [this]() { return !queue.empty(); });  // Wait if the queue is empty
     T item = std::move(queue.front());
     queue.pop();
     cv.notify_all();
@@ -76,7 +78,7 @@ public:
     std::unique_lock<std::mutex> lock(mtx);
     cv.wait(lock, [this]() {
       return !queue.empty() || _closed;
-    }); // Wait if the queue is empty
+    });  // Wait if the queue is empty
     if (_closed && queue.empty()) {
       return std::nullopt;
     }
@@ -148,4 +150,4 @@ public:
     return queue.size();
   }
 };
-} // namespace cpputils
+}  // namespace cpputils

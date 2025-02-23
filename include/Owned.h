@@ -2,7 +2,7 @@
 
 namespace cpputils {
 class Owned {
-protected:
+ protected:
   Owned() {}
   ~Owned() {}
   Owned(const Owned &) = delete;
@@ -11,4 +11,4 @@ protected:
   Owned(Owned &&) noexcept(true) = default;
   Owned &operator=(Owned &&) noexcept(true) = default;
 };
-} // namespace cpputils
+}  // namespace cpputils

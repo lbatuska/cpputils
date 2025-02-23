@@ -3,7 +3,10 @@
 using cpputils::FairRWLock;
 
 FairRWLock::FairRWLock(FairRWLock &&other) noexcept
-    : Owned(std::move(other)), rwLock(), mtx(), cv(),
+    : Owned(std::move(other)),
+      rwLock(),
+      mtx(),
+      cv(),
       active_readers(other.active_readers),
       active_writers(other.active_writers),
       waiting_writers(other.waiting_writers) {}
