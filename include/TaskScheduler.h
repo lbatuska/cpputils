@@ -131,6 +131,7 @@ class TaskScheduler : public Owned {
   inline size_t getNumThreads() const { return numThreads; }
   inline bool running() const { return isRunning; }
   inline size_t queueSize() const { return taskQueue.current_size(); }
+  inline bool full() const { return taskQueue.full(); }
 
   inline uint64_t getThreadStartTimestamp(size_t threadId) const {
     if (threadId < numThreads) {
