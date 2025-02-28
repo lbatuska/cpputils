@@ -122,12 +122,12 @@ class SafeQueue : public Owned {
                   "T must be copyable or Cloneable");
   }
 
-  const inline bool empty() const {
+  inline bool empty() const {
     std::lock_guard<std::mutex> lock(mtx);
     return queue.empty();
   }
 
-  const inline bool closed() const {
+  inline bool closed() const {
     std::lock_guard<std::mutex> lock(mtx);
     return _closed;
   }
@@ -145,9 +145,14 @@ class SafeQueue : public Owned {
     cv.wait(lock, [this]() { return !queue.empty() || _closed; });
   }
 
-  const inline size_t current_size() const {
+  inline size_t current_size() const {
     std::lock_guard<std::mutex> lock(mtx);
     return queue.size();
+  }
+
+  inline bool full() const {
+    std::lock_guard<std::mutex> lock(mtx);
+    return max_size <= queue.size();
   }
 };
 }  // namespace cpputils
