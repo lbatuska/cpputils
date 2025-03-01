@@ -6,6 +6,7 @@
 #include <cstdint>
 #include <random>
 
+namespace cpputils {
 class UUIDv7Generator {
   /*
    *
@@ -53,3 +54,4 @@ class UUIDv7Generator {
 
   static std::string uuidToString(const std::array<uint8_t, 16> &uuid);
 };
+};  // namespace cpputils

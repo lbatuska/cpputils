@@ -1,5 +1,7 @@
 #include "UUIDv7.h"
 
+using cpputils::UUIDv7Generator;
+
 uint8_t UUIDv7Generator::next_sequence(uint64_t current_timestamp) {
   uint64_t prev_timestamp = last_timestamp.load(std::memory_order_relaxed);
 
