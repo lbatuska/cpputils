@@ -50,10 +50,10 @@ class TaskScheduler : public Owned {
       }
       auto &task = maybetask.value();
       try {
-        threadStartTimestamps[threadId] =
+        threadStartTimestamps[threadId] = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::seconds>(
                 std::chrono::system_clock::now().time_since_epoch())
-                .count();
+                .count());
         if constexpr (std::is_void<T>::value) {
           task();
           if (taskDoneCallback) {
@@ -77,8 +77,8 @@ class TaskScheduler : public Owned {
   }
 
  public:
-  TaskScheduler(size_t numThreads, size_t queueSize)
-      : taskQueue(queueSize), isRunning(true), numThreads(numThreads) {
+  TaskScheduler(size_t NumThreads, size_t QueueSize)
+      : taskQueue(QueueSize), isRunning(true), numThreads(NumThreads) {
     threadStartTimestamps.resize(numThreads);
     for (size_t i = 0; i < numThreads; ++i) {
       workerThreads.emplace_back([this, i]() { this->workerFunction(i); });
