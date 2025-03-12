@@ -1,5 +1,7 @@
 #include "UUIDv7.h"
 
+#include <cstddef>
+
 using cpputils::UUIDv7Generator;
 
 uint8_t UUIDv7Generator::next_sequence(uint64_t current_timestamp) {
@@ -37,7 +39,7 @@ std::array<uint8_t, 16> UUIDv7Generator::generate() {
   uuid[8] = (seq & 0xFF) | 0x80;
 
   // Fill remaining bytes with randomness
-  for (int i = 9; i < 16; i++) {
+  for (size_t i = 9; i < 16; i++) {
     uuid[i] = (rand_b >> ((15 - i) * 8)) & 0xFF;
   }
 
@@ -48,7 +50,7 @@ std::string UUIDv7Generator::uuidToString(const std::array<uint8_t, 16> &uuid) {
   char buffer[36];
   constexpr int dash_positions[] = {8, 13, 18, 23};
   int j = 0;
-  for (int i = 0; i < 16; ++i) {
+  for (size_t i = 0; i < 16; ++i) {
     // Convert each byte to hex
     sprintf(&buffer[j], "%02x", uuid[i]);
     j += 2;

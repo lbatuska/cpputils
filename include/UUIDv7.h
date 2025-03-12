@@ -3,6 +3,7 @@
 #include <array>
 #include <atomic>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <random>
 
@@ -31,8 +32,9 @@ class UUIDv7Generator {
 
   inline uint64_t get_current_timestamp_ms() {
     using namespace std::chrono;
-    return duration_cast<milliseconds>(system_clock::now().time_since_epoch())
-        .count();
+    return static_cast<uint64_t>(
+        duration_cast<milliseconds>(system_clock::now().time_since_epoch())
+            .count());
   }
   inline uint64_t random64() { return rng(); }
 
@@ -44,7 +46,7 @@ class UUIDv7Generator {
   static inline uint64_t get_timestamp_from_uuid(
       std::array<uint8_t, 16> &uuid) {
     uint64_t timestamp = 0;
-    for (int i = 0; i < 6; ++i) {
+    for (size_t i = 0; i < 6; ++i) {
       timestamp = (timestamp << 8) | uuid[i];
     }
     return timestamp;
