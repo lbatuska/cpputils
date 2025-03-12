@@ -31,14 +31,14 @@ class SafeQueue : public Owned {
   SafeQueue &operator=(SafeQueue &&other) noexcept {
     if (this != &other) {
       std::lock_guard<std::mutex> lock(other.mtx);
-      queue = std::move(other.queue);
       _closed = other._closed;
+      queue = std::move(other.queue);
     }
     return *this;
   }
 
   explicit SafeQueue(size_t size) noexcept(true)
-      : max_size(size), _closed(false) {}
+      : _closed(false), max_size(size) {}
 
   bool push(const T &item) noexcept {
     std::unique_lock<std::mutex> lock(mtx);
