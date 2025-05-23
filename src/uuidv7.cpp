@@ -1,11 +1,13 @@
-#include "UUIDv7.h"
+#include "uuidv7.h"
+#include "datetime.h"
 
 #include <cstddef>
 #include <cstdio>
+#include <string>
 
 using cpputils::UUIDv7Generator;
 
-uint8_t UUIDv7Generator::next_sequence(uint64_t current_timestamp) {
+uint8_t UUIDv7Generator::next_sequence(int64_t current_timestamp) {
   uint64_t prev_timestamp = last_timestamp.load(std::memory_order_relaxed);
 
   if (current_timestamp > prev_timestamp) {
@@ -19,7 +21,7 @@ uint8_t UUIDv7Generator::next_sequence(uint64_t current_timestamp) {
 
 std::array<uint8_t, 16> UUIDv7Generator::generate() {
   std::array<uint8_t, 16> uuid{};
-  uint64_t timestamp = get_current_timestamp_ms();
+  int64_t timestamp = cpputils::datetime::now();
   uint8_t seq = next_sequence(timestamp);
   uint64_t rand_a = random64();
   uint64_t rand_b = random64();

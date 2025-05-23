@@ -1,7 +1,8 @@
-#include "FileContainer.h"
+#include "file_container.h"
 
 #include <fstream>
 #include <sstream>
+#include <string>
 
 namespace cpputils {
 

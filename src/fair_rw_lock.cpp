@@ -1,10 +1,9 @@
-#include "FairRWLock.h"
+#include "fair_rw_lock.h"
 
 using cpputils::FairRWLock;
 
-FairRWLock::FairRWLock(FairRWLock &&other) noexcept
-    : Owned(std::move(other)),
-      rwLock(),
+FairRWLock::FairRWLock(FairRWLock&& other) noexcept
+    : rwLock(),
       mtx(),
       cv(),
       active_readers(other.active_readers),

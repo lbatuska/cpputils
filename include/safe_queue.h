@@ -2,18 +2,14 @@
 
 #include <condition_variable>
 #include <cstddef>
-#include <memory>
 #include <mutex>
 #include <optional>
 #include <queue>
 #include <utility>
 
-#include "Clone.h"
-#include "Owned.h"
-
 namespace cpputils {
 template <typename T>
-class SafeQueue : public Owned {
+class SafeQueue {
  private:
   std::queue<T> queue;
   mutable std::mutex mtx;
@@ -23,12 +19,12 @@ class SafeQueue : public Owned {
  public:
   const size_t max_size;
 
-  SafeQueue(SafeQueue &&other) noexcept
+  SafeQueue(SafeQueue&& other) noexcept
       : queue(std::move(other.queue)),
         _closed(other._closed),
-        max_size(other.max_size) {};
+        max_size(other.max_size) {}
 
-  SafeQueue &operator=(SafeQueue &&other) noexcept {
+  SafeQueue& operator=(SafeQueue&& other) noexcept {
     if (this != &other) {
       std::lock_guard<std::mutex> lock(other.mtx);
       _closed = other._closed;
@@ -37,10 +33,10 @@ class SafeQueue : public Owned {
     return *this;
   }
 
-  explicit SafeQueue(size_t size) noexcept(true)
-      : _closed(false), max_size(size) {}
+  explicit SafeQueue(size_t MaxSize) noexcept(true)
+      : _closed(false), max_size(MaxSize) {}
 
-  bool push(const T &item) noexcept {
+  bool push(const T& item) noexcept {
     std::unique_lock<std::mutex> lock(mtx);
     if (_closed)  // We should not be able to push into a closed queue
       return false;
@@ -52,9 +48,10 @@ class SafeQueue : public Owned {
     return true;
   }
 
-  bool push(T &&item) noexcept {
+  bool push(T&& item) noexcept {
     std::unique_lock<std::mutex> lock(mtx);
-    if (_closed) return false;
+    if (_closed)
+      return false;
     cv.wait(lock, [this]() { return queue.size() < max_size; });
     queue.push(std::move(item));
     cv.notify_one();
@@ -95,11 +92,8 @@ class SafeQueue : public Owned {
     cv.wait(lock, [this]() { return !queue.empty(); });
     if constexpr (std::is_copy_constructible<T>::value) {
       return queue.front();
-    } else if constexpr (std::is_base_of_v<Clone<CloneType>, T>) {
-      return queue.front().clone();
     }
-    static_assert(std::is_copy_constructible<T>::value ||
-                      std::is_base_of_v<Clone<CloneType>, T>,
+    static_assert(std::is_copy_constructible<T>::value,
                   "T must be copyable or Cloneable");
   }
 
@@ -111,14 +105,8 @@ class SafeQueue : public Owned {
         return std::optional<T>(std::nullopt);
       }
       return std::optional<T>(queue.front());
-    } else if constexpr (std::is_base_of_v<Clone<CloneType>, T>) {
-      if (queue.empty()) {
-        return std::optional<std::unique_ptr<CloneType>>(std::nullopt);
-      }
-      return std::optional<std::unique_ptr<CloneType>>(queue.front().clone());
     }
-    static_assert(std::is_copy_constructible<T>::value ||
-                      std::is_base_of_v<Clone<CloneType>, T>,
+    static_assert(std::is_copy_constructible<T>::value,
                   "T must be copyable or Cloneable");
   }
 

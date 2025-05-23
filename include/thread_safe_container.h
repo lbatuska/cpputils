@@ -1,9 +1,10 @@
 #pragma once
+
 #include <memory>
 #include <mutex>
 #include <shared_mutex>
 
-#include "FairRWLock.h"
+#include "fair_rw_lock.h"
 
 namespace cpputils {
 template <typename T, typename LockType = std::shared_mutex>
@@ -19,20 +20,19 @@ class ThreadSafeContainer {
   std::shared_ptr<LockType> rwLock;
 
  public:
-  ThreadSafeContainer(T &&initialData)
+  ThreadSafeContainer(T&& initialData)
       : data(std::make_shared<T>(std::move(initialData))),
         rwLock(std::make_shared<std::shared_mutex>()) {}
 
-  ThreadSafeContainer(const ThreadSafeContainer &other)
+  ThreadSafeContainer(const ThreadSafeContainer& other)
       : data(other.data), rwLock(other.rwLock) {}
 
-  ThreadSafeContainer(std::shared_ptr<T> &&existingData)
+  ThreadSafeContainer(std::shared_ptr<T>&& existingData)
       : data(std::move(existingData)),
         rwLock(std::make_shared<std::shared_mutex>()) {}
 
   template <typename Func>
-  auto read(Func func) const
-      -> decltype(func(std::declval<const T &>())) const {
+  auto read(Func func) const -> decltype(func(std::declval<const T&>())) const {
     std::shared_lock lock(*rwLock);
     if constexpr (std::is_void_v<decltype(func(*data))>) {
       func(*data);
@@ -59,19 +59,18 @@ class ThreadSafeContainer<T, FairRWLock> {
   std::shared_ptr<FairRWLock> rwLock;
 
  public:
-  ThreadSafeContainer(T &&initialData)
+  ThreadSafeContainer(T&& initialData)
       : data(std::make_shared<T>(std::move(initialData))),
         rwLock(std::make_shared<FairRWLock>()) {}
 
-  ThreadSafeContainer(std::shared_ptr<T> &&existingData)
+  ThreadSafeContainer(std::shared_ptr<T>&& existingData)
       : data(std::move(existingData)), rwLock(std::make_shared<FairRWLock>()) {}
 
-  ThreadSafeContainer(const ThreadSafeContainer &other)
+  ThreadSafeContainer(const ThreadSafeContainer& other)
       : data(other.data), rwLock(other.rwLock) {}
 
   template <typename Func>
-  auto read(Func func) const
-      -> decltype(func(std::declval<const T &>())) const {
+  auto read(Func func) const -> decltype(func(std::declval<const T&>())) const {
     rwLock->acquire_read();
     if constexpr (std::is_void_v<decltype(func(*data))>) {
       func(*data);
@@ -106,19 +105,18 @@ class ThreadSafeContainer<T, std::mutex> {
   std::shared_ptr<std::mutex> rwLock;
 
  public:
-  ThreadSafeContainer(T &&initialData)
+  ThreadSafeContainer(T&& initialData)
       : data(std::make_shared<T>(std::move(initialData))),
         rwLock(std::make_shared<std::mutex>()) {}
 
-  ThreadSafeContainer(const ThreadSafeContainer &other)
+  ThreadSafeContainer(const ThreadSafeContainer& other)
       : data(other.data), rwLock(other.rwLock) {}
 
-  ThreadSafeContainer(std::shared_ptr<T> &&existingData)
+  ThreadSafeContainer(std::shared_ptr<T>&& existingData)
       : data(std::move(existingData)), rwLock(std::make_shared<std::mutex>()) {}
 
   template <typename Func>
-  auto read(Func func) const
-      -> decltype(func(std::declval<const T &>())) const {
+  auto read(Func func) const -> decltype(func(std::declval<const T&>())) const {
     std::unique_lock lock(*rwLock);
     if constexpr (std::is_void_v<decltype(func(*data))>) {
       func(*data);

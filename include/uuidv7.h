@@ -3,10 +3,12 @@
 #include <string.h>
 #include <array>
 #include <atomic>
-#include <chrono>
 #include <cstddef>
 #include <cstdint>
 #include <random>
+#include <string>
+
+#include "datetime.h"
 
 namespace cpputils {
 class UUIDv7Generator {
@@ -27,20 +29,20 @@ class UUIDv7Generator {
    */
 
  private:
-  std::atomic<uint64_t> last_timestamp{0};
+  std::atomic<int64_t> last_timestamp{0};
   std::atomic<uint8_t> sequence{0};
   std::mt19937_64 rng;
 
-  inline uint64_t get_current_timestamp_ms() {
-    using namespace std::chrono;
-    return static_cast<uint64_t>(
-        duration_cast<milliseconds>(system_clock::now().time_since_epoch())
-            .count());
-  }
+  // inline uint64_t get_current_timestamp_ms() {
+  //   using namespace std::chrono;
+  //   return static_cast<uint64_t>(
+  //       duration_cast<milliseconds>(system_clock::now().time_since_epoch())
+  //           .count());
+  // }
 
   inline uint64_t random64() { return rng(); }
 
-  uint8_t next_sequence(uint64_t current_timestamp);
+  uint8_t next_sequence(int64_t current_timestamp);
 
  public:
   inline UUIDv7Generator() : rng(std::random_device{}()) {}

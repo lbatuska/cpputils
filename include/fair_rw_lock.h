@@ -4,10 +4,8 @@
 #include <mutex>
 #include <shared_mutex>
 
-#include "Owned.h"
-
 namespace cpputils {
-class FairRWLock : public Owned {
+class FairRWLock {
  private:
   mutable std::shared_mutex rwLock;
   mutable std::mutex mtx;
@@ -18,7 +16,7 @@ class FairRWLock : public Owned {
 
  public:
   FairRWLock() = default;
-  FairRWLock(FairRWLock &&other) noexcept;
+  FairRWLock(FairRWLock&& other) noexcept;
   void acquire_read() const;
   void release_read() const;
   void acquire_write();

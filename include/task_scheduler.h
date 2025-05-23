@@ -1,4 +1,5 @@
 #pragma once
+
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
@@ -7,15 +8,15 @@
 #include <iostream>
 #include <optional>
 #include <thread>
+#include <utility>
 #include <vector>
 
-#include "Owned.h"
-#include "SafeQueue.h"
+#include "safe_queue.h"
 
 namespace cpputils {
 
 template <typename T = void>
-class TaskScheduler : public Owned {
+class TaskScheduler {
  private:
   using TaskType =
       std::conditional_t<std::is_void<T>::value, std::function<void()>,
@@ -48,7 +49,7 @@ class TaskScheduler : public Owned {
       if (!maybetask.has_value()) {
         return;
       }
-      auto &task = maybetask.value();
+      auto& task = maybetask.value();
       try {
         threadStartTimestamps[threadId] = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::seconds>(
@@ -68,7 +69,7 @@ class TaskScheduler : public Owned {
             taskDoneCallback(threadId, std::move(f.get()));
           }
         }
-      } catch (const std::exception &e) {
+      } catch (const std::exception& e) {
         std::cerr << "Caught std::exception: " << e.what() << "\n";
       } catch (...) {
         std::cerr << "Caught unknown exception\n";
@@ -77,15 +78,15 @@ class TaskScheduler : public Owned {
   }
 
  public:
-  TaskScheduler(size_t NumThreads, size_t QueueSize)
-      : taskQueue(QueueSize), isRunning(true), numThreads(NumThreads) {
+  TaskScheduler(size_t NumThreads, size_t QueueMaxSize)
+      : taskQueue(QueueMaxSize), isRunning(true), numThreads(NumThreads) {
     threadStartTimestamps.resize(numThreads);
     for (size_t i = 0; i < numThreads; ++i) {
       workerThreads.emplace_back([this, i]() { this->workerFunction(i); });
     }
   }
 
-  TaskScheduler(TaskScheduler &&other) noexcept
+  TaskScheduler(TaskScheduler&& other) noexcept
       : taskQueue(std::move(other.taskQueue)),
         workerThreads(std::move(other.workerThreads)),
         isRunning(other.isRunning.load()),
@@ -100,14 +101,14 @@ class TaskScheduler : public Owned {
     }
   }
 
-  bool addTask(TaskType &&task) noexcept {
+  bool addTask(TaskType&& task) noexcept {
     return taskQueue.push(std::move(task));
   }
 
   void stop() noexcept {
     isRunning = false;
     taskQueue.close();
-    for (auto &thread : workerThreads) {
+    for (auto& thread : workerThreads) {
       if (thread.joinable()) {
         thread.join();
       }
@@ -129,8 +130,11 @@ class TaskScheduler : public Owned {
   }
 
   inline size_t getNumThreads() const { return numThreads; }
+
   inline bool running() const { return isRunning; }
+
   inline size_t queueSize() const { return taskQueue.current_size(); }
+
   inline bool full() const { return taskQueue.full(); }
 
   inline uint64_t getThreadStartTimestamp(size_t threadId) const {
@@ -139,6 +143,7 @@ class TaskScheduler : public Owned {
     }
     return 0;
   }
+
   inline std::vector<uint64_t> const getThreadStartTimestamps() const {
     return threadStartTimestamps;
   }

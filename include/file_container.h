@@ -17,7 +17,7 @@ class FileContainer {
   static std::string read_file(const std::filesystem::path& file_path);
 
  public:
-  FileContainer(std::string_view folder)
+  explicit FileContainer(std::string_view folder)
       : abs_path(std::filesystem::absolute(folder)) {}
 
   // Returns cache or reads file then returns content
