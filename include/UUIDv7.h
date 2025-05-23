@@ -1,5 +1,6 @@
 #pragma once
 
+#include <string.h>
 #include <array>
 #include <atomic>
 #include <chrono>
@@ -36,15 +37,16 @@ class UUIDv7Generator {
         duration_cast<milliseconds>(system_clock::now().time_since_epoch())
             .count());
   }
+
   inline uint64_t random64() { return rng(); }
 
   uint8_t next_sequence(uint64_t current_timestamp);
 
  public:
-  inline UUIDv7Generator() : rng(std::random_device{}()) {};
+  inline UUIDv7Generator() : rng(std::random_device{}()) {}
 
   static inline uint64_t get_timestamp_from_uuid(
-      std::array<uint8_t, 16> &uuid) {
+      std::array<uint8_t, 16>& uuid) {
     uint64_t timestamp = 0;
     for (size_t i = 0; i < 6; ++i) {
       timestamp = (timestamp << 8) | uuid[i];
@@ -54,6 +56,6 @@ class UUIDv7Generator {
 
   std::array<uint8_t, 16> generate();
 
-  static std::string uuidToString(const std::array<uint8_t, 16> &uuid);
+  static std::string uuidToString(const std::array<uint8_t, 16>& uuid);
 };
 };  // namespace cpputils

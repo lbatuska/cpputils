@@ -1,6 +1,7 @@
 #include "UUIDv7.h"
 
 #include <cstddef>
+#include <cstdio>
 
 using cpputils::UUIDv7Generator;
 
@@ -46,8 +47,8 @@ std::array<uint8_t, 16> UUIDv7Generator::generate() {
   return uuid;
 }
 
-std::string UUIDv7Generator::uuidToString(const std::array<uint8_t, 16> &uuid) {
-  char buffer[36];
+std::string UUIDv7Generator::uuidToString(const std::array<uint8_t, 16>& uuid) {
+  char buffer[37];
   constexpr int dash_positions[] = {8, 13, 18, 23};
   int j = 0;
   for (size_t i = 0; i < 16; ++i) {
