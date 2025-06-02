@@ -1,17 +1,29 @@
 #pragma once
 
-#include <string.h>
 #include <array>
 #include <atomic>
-#include <cstddef>
 #include <cstdint>
 #include <random>
 #include <string>
 
-#include "datetime.h"
-
 namespace cpputils {
-class UUIDv7Generator {
+namespace uuid {
+
+extern std::string uuidToString(const std::array<uint8_t, 16>& uuid);
+
+class V4 {
+ private:
+  std::mt19937_64 rng;
+
+  inline uint64_t random64() { return rng(); }
+
+ public:
+  inline V4() : rng(std::random_device{}()) {}
+
+  std::array<uint8_t, 16> generate();
+};
+
+class V7 {
   /*
    *
    *    0                   1                   2                   3
@@ -45,7 +57,7 @@ class UUIDv7Generator {
   uint8_t next_sequence(int64_t current_timestamp);
 
  public:
-  inline UUIDv7Generator() : rng(std::random_device{}()) {}
+  inline V7() : rng(std::random_device{}()) {}
 
   static inline uint64_t get_timestamp_from_uuid(
       std::array<uint8_t, 16>& uuid) {
@@ -57,7 +69,8 @@ class UUIDv7Generator {
   }
 
   std::array<uint8_t, 16> generate();
-
-  static std::string uuidToString(const std::array<uint8_t, 16>& uuid);
 };
-};  // namespace cpputils
+
+}  // namespace uuid
+
+}  // namespace cpputils
