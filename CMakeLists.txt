@@ -7,6 +7,6 @@ if(SRC_FILES)
 else()
   # If there are no .cpp files, create an interface library
   add_library(cpputils INTERFACE)
-  target_include_directories(cpputils INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
+  target_include_directories(cpputils
+                             INTERFACE ${CMAKE_CURRENT_LIST_DIR}/include)
 endif()
-
