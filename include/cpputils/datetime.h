@@ -56,5 +56,10 @@ inline int64_t to_timestamp(std::chrono::system_clock::time_point tp) {
   return duration_cast<milliseconds>(tp.time_since_epoch()).count();
 }
 
+inline int64_t to_timestamp_seconds(std::chrono::system_clock::time_point tp) {
+  using namespace std::chrono;
+  return duration_cast<seconds>(tp.time_since_epoch()).count();
+}
+
 }  // namespace datetime
 }  // namespace cpputils
