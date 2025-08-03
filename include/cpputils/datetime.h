@@ -61,5 +61,19 @@ inline int64_t to_timestamp_seconds(std::chrono::system_clock::time_point tp) {
   return duration_cast<seconds>(tp.time_since_epoch()).count();
 }
 
+template <typename Duration>
+inline int64_t add_to_timestamp(int64_t timestamp, Duration duration) {
+  using namespace std::chrono;
+
+  // Convert the timestamp to a time_point (milliseconds).
+  auto time_point = system_clock::time_point(milliseconds(timestamp));
+
+  // Add the duration (of any type) to the time_point
+  time_point += duration;
+
+  // Convert back to timestamp (in milliseconds).
+  return duration_cast<milliseconds>(time_point.time_since_epoch()).count();
+}
+
 }  // namespace datetime
 }  // namespace cpputils
