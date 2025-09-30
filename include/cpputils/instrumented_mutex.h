@@ -56,7 +56,7 @@ class instrumented_mutex : public std::mutex {
 
     if (!std::mutex::try_lock() && curr_holder != std::thread::id()) {
 #ifdef SPDLOG_ACTIVE_LEVEL
-      SPDLOG_LOGGER_DEBUG(spdlog::default_logger(),
+      SPDLOG_LOGGER_TRACE(spdlog::default_logger(),
                           "[Lock Contention] Thread {}  waiting for "
                           "lock, held by Thread {}",
                           self, curr_holder);
@@ -105,7 +105,7 @@ class instrumented_mutex : public std::mutex {
         std::chrono::duration_cast<std::chrono::milliseconds>(now).count() -
         locked_at;
 #ifdef SPDLOG_ACTIVE_LEVEL
-    SPDLOG_LOGGER_DEBUG(spdlog::default_logger(),
+    SPDLOG_LOGGER_TRACE(spdlog::default_logger(),
                         "[Unlocked] Thread {} held lock for {} ms", self,
                         duration_ms);
 #else
@@ -143,7 +143,7 @@ class instrumented_mutex : public std::mutex {
 
     if (curr_holder != std::thread::id{}) {
 #ifdef SPDLOG_ACTIVE_LEVEL
-      SPDLOG_LOGGER_DEBUG(
+      SPDLOG_LOGGER_TRACE(
           spdlog::default_logger(),
           "[Lock Contention] Thread {} tried to acquire (try_lock) "
           "lock held by Thread {}",
