@@ -35,14 +35,10 @@ struct ExceptionError {
   ExceptionError(std::exception_ptr&& ept) : err(std::move(ept)) {}
 };
 
-template <typename T, typename E = ExceptionError, typename Enable = void,
-          bool EnableConversion = true>
+template <typename T, typename E = ExceptionError, typename Enable = void>
 struct Result {
   using value_type = T;
   using error_type = E;
-
-  // using ok_type = Ok<T>;
-  // using err_type = Err<E>;
 
   template <typename U,
             typename = std::enable_if_t<
@@ -74,20 +70,22 @@ struct Result {
 
 #ifdef RESULT_ALLOW_EMPTY_STATE
   // return {}
-  Result() : data(std::monostate{}) {}
+  Result() noexcept : data(std::monostate{}) {}
 
   // return Ok{}
-  Result(Ok<std::monostate>&&) : data(std::monostate{}) {}
+  Result(Ok<std::monostate>&&) noexcept : data(std::monostate{}) {}
 #endif
 
   // Converting constructors from Ok<U> and Err<F>
   template <typename U,
             typename = std::enable_if_t<std::is_constructible_v<T, U&&>>>
-  Result(Ok<U>&& ok) : data(std::in_place_type<T>, std::move(ok.value)) {}
+  Result(Ok<U>&& ok) noexcept(std::is_nothrow_constructible_v<T>)
+      : data(std::in_place_type<T>, std::move(ok.value)) {}
 
   template <typename F,
             typename = std::enable_if_t<std::is_constructible_v<E, F&&>>>
-  Result(Err<F>&& err) : data(std::in_place_type<E>, std::move(err.error)) {}
+  Result(Err<F>&& err) noexcept(std::is_nothrow_constructible_v<E>)
+      : data(std::in_place_type<E>, std::move(err.error)) {}
 
   // Status checks
   constexpr bool has_value() const noexcept {
@@ -118,7 +116,31 @@ struct Result {
     return std::get<T>(data);
   }
 
+  T const& unwrap() const {
+    if (!std::holds_alternative<T>(data)) {
+#ifdef RESULT_ALLOW_EMPTY_STATE
+      if (std::holds_alternative<std::monostate>(data)) {
+        throw std::runtime_error("Called unwrap() on empty Result");
+      }
+#endif
+      throw std::runtime_error("Called unwrap() on Err value");
+    }
+    return std::get<T>(data);
+  }
+
   E& unwrap_err() {
+    if (!std::holds_alternative<E>(data)) {
+#ifdef RESULT_ALLOW_EMPTY_STATE
+      if (std::holds_alternative<std::monostate>(data)) {
+        throw std::runtime_error("Called unwrap_err() on empty Result");
+      }
+#endif
+      throw std::runtime_error("Called unwrap_err() on Ok value");
+    }
+    return std::get<E>(data);
+  }
+
+  E const& unwrap_err() const {
     if (!std::holds_alternative<E>(data)) {
 #ifdef RESULT_ALLOW_EMPTY_STATE
       if (std::holds_alternative<std::monostate>(data)) {
@@ -143,8 +165,11 @@ struct Result {
 
 #endif
 
-  // Accessors
+  T& value() { return std::get<T>(data); }
+
   T const& value() const { return std::get<T>(data); }
+
+  E& error() { return std::get<E>(data); }
 
   E const& error() const { return std::get<E>(data); }
 
