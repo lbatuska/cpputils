@@ -40,6 +40,18 @@ struct Result {
   using value_type = T;
   using error_type = E;
 
+  template <typename Exc, typename = std::enable_if_t<
+                              std::is_same_v<error_type, ExceptionError>>>
+  bool contains_exception() const {
+    try {
+      std::rethrow_exception(unwrap_err().err);
+    } catch (Exc& e) {
+      return true;
+    } catch (...) {
+      return false;
+    }
+  }
+
   template <typename U,
             typename = std::enable_if_t<
                 ((std::is_constructible_v<T, U&&> ||
