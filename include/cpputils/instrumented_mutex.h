@@ -1,8 +1,5 @@
 #pragma once
 
-#include <atomic>
-#include <chrono>
-#include <cstdint>
 #include <mutex>
 #include <thread>
 
@@ -29,10 +26,13 @@ struct formatter<std::thread::id> : formatter<std::string> {
 
 namespace cpputils {
 
+#if defined(DEBUG) && !defined(NO_INSTRUMENT_MUTEX)
+#include <atomic>
+#include <chrono>
+#include <cstdint>
+
 // https://en.cppreference.com/w/cpp/named_req/Mutex
 class instrumented_mutex : public std::mutex {
-#ifdef DEBUG
-#ifndef NO_INSTRUMENT_MUTEX
 
  private:
   int64_t locked_at;
@@ -163,8 +163,8 @@ class instrumented_mutex : public std::mutex {
   bool locked_by_caller() const { return holder == std::this_thread::get_id(); }
 
   bool is_locked() const { return holder != std::thread::id(); }
-
-#endif  // !NO_INSTRUMENT_MUTEX
-#endif  // DEBUG
 };
+#else
+typedef std::mutex instrumented_mutex;
+#endif  // DEBUG && !NO_INSTRUMENT_MUTEX
 }  // namespace cpputils
