@@ -104,6 +104,7 @@ class instrumented_mutex : public std::mutex {
     auto duration_ms =
         std::chrono::duration_cast<std::chrono::milliseconds>(now).count() -
         locked_at;
+    (void)duration_ms;
 #ifdef SPDLOG_ACTIVE_LEVEL
     SPDLOG_LOGGER_TRACE(spdlog::default_logger(),
                         "[Unlocked] Thread {} held lock for {} ms", self,
