@@ -32,6 +32,7 @@ namespace cpputils {
 // https://en.cppreference.com/w/cpp/named_req/Mutex
 class instrumented_mutex : public std::mutex {
 #ifdef DEBUG
+#ifndef NO_INSTRUMENT_MUTEX
 
  private:
   int64_t locked_at;
@@ -163,6 +164,7 @@ class instrumented_mutex : public std::mutex {
 
   bool is_locked() const { return holder != std::thread::id(); }
 
+#endif  // !NO_INSTRUMENT_MUTEX
 #endif  // DEBUG
 };
 }  // namespace cpputils
