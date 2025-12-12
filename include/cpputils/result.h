@@ -172,7 +172,6 @@ struct Result {
 #ifdef RESULT_ENABLE_OPTIONAL_COMPAT
   constexpr explicit operator bool() const noexcept { return has_value(); }
 
-  T const& value() const { return std::get<T>(data); }
 #endif
 
 #endif
