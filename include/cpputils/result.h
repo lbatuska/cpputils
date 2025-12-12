@@ -40,12 +40,28 @@ struct Result {
   using value_type = T;
   using error_type = E;
 
-  template <typename Exc, typename = std::enable_if_t<
-                              std::is_same_v<error_type, ExceptionError>>>
+  template <typename Exc,
+            std::enable_if_t<std::is_same_v<error_type, ExceptionError> &&
+                                 std::is_same_v<Exc, Exc>,
+                             int> = 0>
   bool contains_exception() const {
     try {
       std::rethrow_exception(unwrap_err().err);
-    } catch (Exc& e) {
+    } catch (Exc&) {
+      return true;
+    } catch (...) {
+      return false;
+    }
+  }
+
+  template <typename Exc,
+            std::enable_if_t<std::is_same_v<error_type, std::exception_ptr> &&
+                                 std::is_same_v<Exc, Exc>,
+                             int> = 0>
+  bool contains_exception() const {
+    try {
+      std::rethrow_exception(unwrap_err());
+    } catch (Exc&) {
       return true;
     } catch (...) {
       return false;
