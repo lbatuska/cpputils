@@ -1,6 +1,17 @@
 #pragma once
 
 #include <mutex>
+
+#ifdef NO_INSTRUMENT_MUTEX
+
+namespace cpputils {
+
+typedef std::mutex instrumented_mutex;
+
+#else
+
+#include <atomic>
+#include <chrono>
 #include <thread>
 
 #ifdef SPDLOG_ACTIVE_LEVEL
@@ -8,7 +19,7 @@
 #include <sstream>
 #include <string>
 
-// Custom formatter for std::thread::id
+// Formatter for std::thread::id
 namespace fmt {
 template <>
 struct formatter<std::thread::id> : formatter<std::string> {
@@ -26,145 +37,149 @@ struct formatter<std::thread::id> : formatter<std::string> {
 
 namespace cpputils {
 
-#if defined(DEBUG) && !defined(NO_INSTRUMENT_MUTEX)
-#include <atomic>
-#include <chrono>
-#include <cstdint>
-
-// https://en.cppreference.com/w/cpp/named_req/Mutex
-class instrumented_mutex : public std::mutex {
-
- private:
-  int64_t locked_at;
-  std::atomic<std::thread::id> holder;
-
+class instrumented_mutex {
  public:
+  instrumented_mutex() = default;
+  instrumented_mutex(const instrumented_mutex&) = delete;
+  instrumented_mutex& operator=(const instrumented_mutex&) = delete;
+
   void lock() {
-    auto self = std::this_thread::get_id();
-    auto curr_holder = holder.load();
+    const auto self = std::this_thread::get_id();
 
-    if (curr_holder == self) {
-#ifdef SPDLOG_ACTIVE_LEVEL
-      SPDLOG_LOGGER_WARN(
-          spdlog::default_logger(),
-          "[Recursive Locking] Recursive lock attempt by thread {}", self);
-#else
-      std::cerr << "[Recursive Locking] Recursive lock attempt by thread "
-                << self << "\n";
-#endif
+    if (owner_.load(std::memory_order_relaxed) == self) {
+      log_recursive_lock(self);
+#ifdef MUTEX_TERMINATE
       std::terminate();
+#endif
     }
 
-    if (!std::mutex::try_lock() && curr_holder != std::thread::id()) {
-#ifdef SPDLOG_ACTIVE_LEVEL
-      SPDLOG_LOGGER_TRACE(spdlog::default_logger(),
-                          "[Lock Contention] Thread {}  waiting for "
-                          "lock, held by Thread {}",
-                          self, curr_holder);
-#else
-      std::cout << "Lock Contention] Thread " << self
-                << " waiting for lock, held by Thread " << curr_holder << "\n";
-#endif
-      std::mutex::lock();
+    if (!mtx_.try_lock()) {
+      log_contention(self);
+      mtx_.lock();
     }
 
-    holder = self;
-    locked_at = std::chrono::duration_cast<std::chrono::milliseconds>(
-                    std::chrono::system_clock::now().time_since_epoch())
-                    .count();
-  }
-
-  void unlock() {
-    auto self = std::this_thread::get_id();
-    auto curr_holder = holder.load();
-    if (curr_holder == std::thread::id()) {
-#ifdef SPDLOG_ACTIVE_LEVEL
-      SPDLOG_LOGGER_WARN(spdlog::default_logger(),
-                         "[Unlocking non-locked mutex] Unlock "
-                         "called by {} ,but mutex is not locked.",
-                         self);
-#else
-      std::cerr << "[Unlocking non-locked mutex] Unlock called by" << self
-                << " ,but mutex is not locked.\n";
-#endif
-      std::terminate();
-    }
-    if (curr_holder != self) {
-#ifdef SPDLOG_ACTIVE_LEVEL
-      SPDLOG_LOGGER_WARN(spdlog::default_logger(),
-                         "[Unlocking non-owned mutex] Thread {} "
-                         "tried to unlock mutex held by {}",
-                         self, curr_holder);
-#else
-      std::cerr << "[Unlocking non-owned mutex] Thread " << self
-                << " tried to unlock mutex held by " << curr_holder << "\n";
-#endif
-      std::terminate();
-    }
-    auto now = std::chrono::system_clock::now().time_since_epoch();
-    auto duration_ms =
-        std::chrono::duration_cast<std::chrono::milliseconds>(now).count() -
-        locked_at;
-    (void)duration_ms;
-#ifdef SPDLOG_ACTIVE_LEVEL
-    SPDLOG_LOGGER_TRACE(spdlog::default_logger(),
-                        "[Unlocked] Thread {} held lock for {} ms", self,
-                        duration_ms);
-#else
-    std::cout << "[Unlocked] Thread " << self << " held lock for "
-              << duration_ms << " ms\n";
-#endif
-
-    holder = std::thread::id{};
-    std::mutex::unlock();
+    owner_.store(self, std::memory_order_relaxed);
+    locked_at_ = now_ms();
   }
 
   bool try_lock() {
-    auto self = std::this_thread::get_id();
-    auto curr_holder = holder.load();
+    const auto self = std::this_thread::get_id();
 
-    if (curr_holder == self) {
-#ifdef SPDLOG_ACTIVE_LEVEL
-      SPDLOG_LOGGER_WARN(
-          spdlog::default_logger(),
-          "[Recursive Locking] Recursive try_lock attempt by thread {}", self);
-#else
-      std::cerr << "[Recursive Locking] Recursive try_lock attempt by thread "
-                << self << "\n";
-#endif
+    if (owner_.load(std::memory_order_relaxed) == self) {
+      log_recursive_try_lock(self);
+#ifdef MUTEX_TERMINATE
       std::terminate();
-    }
-
-    if (std::mutex::try_lock()) {
-      holder = self;
-      locked_at = std::chrono::duration_cast<std::chrono::milliseconds>(
-                      std::chrono::system_clock::now().time_since_epoch())
-                      .count();
-      return true;
-    }
-
-    if (curr_holder != std::thread::id{}) {
-#ifdef SPDLOG_ACTIVE_LEVEL
-      SPDLOG_LOGGER_TRACE(
-          spdlog::default_logger(),
-          "[Lock Contention] Thread {} tried to acquire (try_lock) "
-          "lock held by Thread {}",
-          self, curr_holder);
-#else
-      std::cout << "[Lock Contention] Thread " << self
-                << " failed to acquire (try_lock) lock held by Thread "
-                << curr_holder << "\n";
 #endif
+      return false;
+    }
+
+    if (mtx_.try_lock()) {
+      owner_.store(self, std::memory_order_relaxed);
+      locked_at_ = now_ms();
+      return true;
     }
 
     return false;
   }
 
-  bool locked_by_caller() const { return holder == std::this_thread::get_id(); }
+  void unlock() {
+    const auto self = std::this_thread::get_id();
+    const auto owner = owner_.load(std::memory_order_relaxed);
 
-  bool is_locked() const { return holder != std::thread::id(); }
-};
+    if (owner == std::thread::id{}) {
+      log_unlock_unlocked(self);
+#ifdef MUTEX_TERMINATE
+      std::terminate();
+#endif
+      return;
+    }
+
+    if (owner != self) {
+      log_unlock_non_owner(self, owner);
+#ifdef MUTEX_TERMINATE
+      std::terminate();
+#endif
+    }
+
+    owner_.store(std::thread::id{}, std::memory_order_relaxed);
+    mtx_.unlock();
+  }
+
+  bool locked_by_caller() const {
+    return owner_.load(std::memory_order_relaxed) == std::this_thread::get_id();
+  }
+
+  bool is_locked() const {
+    return owner_.load(std::memory_order_relaxed) != std::thread::id{};
+  }
+
+ private:
+  std::mutex mtx_;
+  std::atomic<std::thread::id> owner_{};
+  std::atomic<int64_t> locked_at_{0};
+
+  static int64_t now_ms() {
+    return std::chrono::duration_cast<std::chrono::milliseconds>(
+               std::chrono::system_clock::now().time_since_epoch())
+        .count();
+  }
+
+  static void log_recursive_lock(const std::thread::id& self) {
+#ifdef SPDLOG_ACTIVE_LEVEL
+    SPDLOG_LOGGER_WARN(spdlog::default_logger(),
+                       "[Recursive Lock] Thread {} attempted to re-lock mutex",
+                       self);
 #else
-typedef std::mutex instrumented_mutex;
-#endif  // DEBUG && !NO_INSTRUMENT_MUTEX
+    std::cerr << "[Recursive Lock] Thread " << self
+              << " attempted to re-lock mutex\n";
+#endif
+  }
+
+  static void log_recursive_try_lock(const std::thread::id& self) {
+#ifdef SPDLOG_ACTIVE_LEVEL
+    SPDLOG_LOGGER_WARN(spdlog::default_logger(),
+                       "[Recursive TryLock] Thread {} attempted try_lock()",
+                       self);
+#else
+    std::cerr << "[Recursive TryLock] Thread " << self
+              << " attempted try_lock()\n";
+#endif
+  }
+
+  static void log_contention(const std::thread::id& self) {
+#ifdef SPDLOG_ACTIVE_LEVEL
+    SPDLOG_LOGGER_TRACE(spdlog::default_logger(),
+                        "[Lock Contention] Thread {} waiting for mutex", self);
+#else
+    std::cout << "[Lock Contention] Thread " << self << " waiting for mutex\n";
+#endif
+  }
+
+  static void log_unlock_unlocked(const std::thread::id& self) {
+#ifdef SPDLOG_ACTIVE_LEVEL
+    SPDLOG_LOGGER_WARN(
+        spdlog::default_logger(),
+        "[Unlock Error] Thread {} tried to unlock an unlocked mutex", self);
+#else
+    std::cerr << "[Unlock Error] Thread " << self
+              << " tried to unlock an unlocked mutex\n";
+#endif
+  }
+
+  static void log_unlock_non_owner(const std::thread::id& self,
+                                   const std::thread::id& owner) {
+#ifdef SPDLOG_ACTIVE_LEVEL
+    SPDLOG_LOGGER_WARN(
+        spdlog::default_logger(),
+        "[Unlock Error] Thread {} tried to unlock mutex owned by {}", self,
+        owner);
+#else
+    std::cerr << "[Unlock Error] Thread " << self
+              << " tried to unlock mutex owned by " << owner << "\n";
+#endif
+  }
+};
+
+#endif
+
 }  // namespace cpputils
