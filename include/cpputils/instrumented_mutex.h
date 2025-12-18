@@ -1,5 +1,6 @@
 #pragma once
 
+#include <condition_variable>
 #include <mutex>
 
 #ifdef NO_INSTRUMENT_MUTEX
@@ -7,6 +8,7 @@
 namespace cpputils {
 
 typedef std::mutex instrumented_mutex;
+typedef std::condition_variable condition_variable_t;
 
 #else
 
@@ -36,6 +38,8 @@ struct formatter<std::thread::id> : formatter<std::string> {
 #endif
 
 namespace cpputils {
+
+typedef std::condition_variable_any condition_variable_t;
 
 class instrumented_mutex {
  public:
